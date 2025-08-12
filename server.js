@@ -7,10 +7,10 @@ const wss = new WebSocket.Server({ port: PORT });
 
 const sessions = {};
 const clients = {};
-const disconnectTimers = {}; // track reconnect grace periods
+const disconnectTimers = {};
 
 function send(ws, obj) {
-  try { ws.send(JSON.stringify(obj)); } catch (e) {}
+  try { ws.send(JSON.stringify(obj)); } catch {}
 }
 
 function broadcastToSession(sessionId, obj) {
@@ -34,6 +34,38 @@ wss.on('connection', (ws) => {
     try { data = JSON.parse(msg); } catch { send(ws, { type: 'error', message: 'invalid-json' }); return; }
     const { type } = data;
 
+    // === Restore old session if reconnect ===
+    if (type === 'restore-session') {
+      const { sessionCode, role } = data;
+      const session = sessions[sessionCode];
+      if (session) {
+        clearTimeout(disconnectTimers[sessionCode]);
+        if (role === 'host' && !clients[session.hostId]) {
+          session.hostId = clientId;
+          ws._sessionId = session.id;
+          send(ws, { type: 'session-restored', sessionId: session.id, sessionCode });
+          if (session.clientId && clients[session.clientId]) {
+            send(clients[session.clientId], { type: 'host-reconnected' });
+          }
+          console.log(`Host reconnected to ${sessionCode}`);
+          return;
+        }
+        if (role === 'client' && !clients[session.clientId]) {
+          session.clientId = clientId;
+          ws._sessionId = session.id;
+          send(ws, { type: 'session-restored', sessionId: session.id, sessionCode });
+          if (clients[session.hostId]) {
+            send(clients[session.hostId], { type: 'client-reconnected' });
+          }
+          console.log(`Client reconnected to ${sessionCode}`);
+          return;
+        }
+      }
+      send(ws, { type: 'error', message: 'no-session-to-restore' });
+      return;
+    }
+
+    // === Host creates session ===
     if (type === 'create-session') {
       const sessionCode = '' + Math.floor(100000 + Math.random() * 900000);
       const sessionId = uuidv4();
@@ -44,6 +76,7 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    // === Client joins session ===
     if (type === 'join-session') {
       const { sessionCode } = data;
       const session = sessions[sessionCode];
@@ -64,6 +97,7 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    // === Signaling ===
     if (['offer', 'answer', 'ice-candidate'].includes(type)) {
       const { sessionId, payload } = data;
       const sessionEntry = Object.values(sessions).find(s => s.id === sessionId);
@@ -76,6 +110,7 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    // === Toggle control ===
     if (type === 'toggle-control') {
       const { sessionId, enabled } = data;
       const sessionEntry = Object.values(sessions).find(s => s.id === sessionId);
@@ -86,6 +121,7 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    // === Forward control event ===
     if (type === 'control-event') {
       const { sessionId, event } = data;
       const sessionEntry = Object.values(sessions).find(s => s.id === sessionId);
@@ -110,7 +146,6 @@ wss.on('connection', (ws) => {
         const s = sessions[code];
         if (s && s.id === sessionId) {
           if (s.hostId === clientId) {
-            // Grace period for host reconnection
             console.log(`Host disconnected from ${code}, waiting 2 minutes for reconnection...`);
             disconnectTimers[code] = setTimeout(() => {
               if (sessions[code] && sessions[code].hostId === clientId) {
@@ -118,9 +153,8 @@ wss.on('connection', (ws) => {
                 delete sessions[code];
                 console.log(`Session ${code} removed after host grace period expired`);
               }
-            }, 120000); // 2 min
+            }, 120000);
           } else if (s.clientId === clientId) {
-            // Grace period for client reconnection
             console.log(`Client disconnected from ${code}, waiting 2 minutes for reconnection...`);
             disconnectTimers[code] = setTimeout(() => {
               if (sessions[code] && sessions[code].clientId === clientId) {
@@ -129,7 +163,7 @@ wss.on('connection', (ws) => {
                 if (clients[s.hostId]) send(clients[s.hostId], { type: 'client-disconnected' });
                 console.log(`Client removed from session ${code} after grace period expired`);
               }
-            }, 120000); // 2 min
+            }, 120000);
           }
           break;
         }
