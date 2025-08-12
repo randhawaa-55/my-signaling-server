@@ -117,6 +117,50 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    // Reconnect to existing session
+    if (type === 'reconnect-session') {
+      const { sessionCode, role } = data;
+      if (!sessionCode || !sessions[sessionCode]) {
+        send(ws, { type: 'reconnect-session-failed', message: 'Session no longer exists' });
+        return;
+      }
+      const session = sessions[sessionCode];
+      
+      if (role === 'host') {
+        // Reconnect as host
+        if (session.hostId && clients[session.hostId]) {
+          send(ws, { type: 'reconnect-session-failed', message: 'Host already connected' });
+          return;
+        }
+        session.hostId = clientId;
+        session.hostOffline = false;
+        ws._sessionId = session.id;
+        ws._role = 'host';
+        send(ws, { type: 'reconnect-session-success', sessionId: session.id, sessionCode });
+        console.log(`Host ${clientId} reconnected to session ${sessionCode}`);
+      } else if (role === 'client') {
+        // Reconnect as client
+        if (session.clientId && clients[session.clientId]) {
+          send(ws, { type: 'reconnect-session-failed', message: 'Client already connected' });
+          return;
+        }
+        if (!clients[session.hostId]) {
+          send(ws, { type: 'reconnect-session-failed', message: 'Host not available' });
+          return;
+        }
+        session.clientId = clientId;
+        session.clientOffline = false;
+        ws._sessionId = session.id;
+        ws._role = 'client';
+        send(ws, { type: 'reconnect-session-success', sessionId: session.id, sessionCode });
+        send(clients[session.hostId], { type: 'client-joined', clientId });
+        console.log(`Client ${clientId} reconnected to session ${sessionCode}`);
+      } else {
+        send(ws, { type: 'reconnect-session-failed', message: 'Invalid role' });
+      }
+      return;
+    }
+
     // Signaling
     if (['offer', 'answer', 'ice-candidate'].includes(type)) {
       const { sessionId, payload } = data;
