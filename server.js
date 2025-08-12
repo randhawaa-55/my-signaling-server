@@ -27,6 +27,9 @@ function heartbeat() {
 wss.on('connection', (ws) => {
   ws.isAlive = true;
   ws.on('pong', heartbeat);
+  ws.on('ping', () => {
+    ws.pong(); // Respond to client pings
+  });
 
   const clientId = uuidv4();
   clients[clientId] = ws;
@@ -222,8 +225,12 @@ setInterval(() => {
   wss.clients.forEach((ws) => {
     if (!ws.isAlive) return ws.terminate();
     ws.isAlive = false;
-    ws.ping();
+    try {
+      ws.ping();
+    } catch (e) {
+      // ignore
+    }
   });
-}, 30000);
+}, 45000);
 
 console.log(`Signaling server running on ws://localhost:${PORT}`);
