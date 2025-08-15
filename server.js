@@ -231,6 +231,6 @@ setInterval(() => {
       // ignore
     }
   });
-}, 45000);
+}, 120000);
 
 console.log(`Signaling server running on ws://localhost:${PORT}`);

@@ -3,131 +3,570 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Access-It Remote Desktop</title>
+    <title>Access-It Remote Desktop - Host</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         }
-        
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        
         h1 {
-            color: #2c3e50;
-            margin-bottom: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
-        
-        .logo {
-            font-size: 48px;
-            margin-bottom: 10px;
+        .status {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
         }
-        
-        .tagline {
-            font-style: italic;
-            color: #7f8c8d;
-        }
-        
-        .card {
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        .session-info {
+            background: rgba(255, 255, 255, 0.1);
             padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .session-code {
+            font-size: 2em;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin: 10px 0;
+            letter-spacing: 3px;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
             margin-bottom: 20px;
         }
-        
-        h2 {
-            color: #3498db;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
-        }
-        
-        ul {
-            padding-left: 20px;
-        }
-        
-        li {
-            margin-bottom: 10px;
-        }
-        
-        .download-btn {
-            display: inline-block;
-            background-color: #3498db;
+        button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
             color: white;
-            padding: 10px 20px;
-            border-radius: 4px;
-            text-decoration: none;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
             font-weight: bold;
-            margin-top: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
-        
-        .download-btn:hover {
-            background-color: #2980b9;
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
         }
-        
-        footer {
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
             text-align: center;
-            margin-top: 40px;
-            color: #7f8c8d;
-            font-size: 0.9em;
+        }
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #FFD700;
+        }
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <header>
-        <div class="logo">🖥️ ↔️ 🖱️</div>
-        <h1>Access-It Remote Desktop</h1>
-        <p class="tagline">Secure screen sharing and remote control</p>
-    </header>
-    
-    <div class="card">
-        <h2>About</h2>
-        <p>Access-It is a lightweight remote desktop application that allows screen sharing and remote control between two users. It's designed to be simple, secure, and efficient.</p>
+    <div class="container">
+        <h1>🖥️ Access-It Remote Desktop Host</h1>
+        
+        <div class="status" id="status">Ready to start hosting...</div>
+        
+        <div class="session-info hidden" id="sessionInfo">
+            <h3>Session Code:</h3>
+            <div class="session-code" id="sessionCode">------</div>
+            <p>Share this code with the client to connect</p>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn" onclick="startHosting()">Start Hosting</button>
+            <button id="stopBtn" onclick="stopHosting()" disabled>Stop Hosting</button>
+            <button id="toggleControlBtn" onclick="toggleControl()" disabled>Enable Control</button>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="connectionState">Disconnected</div>
+                <div>Connection State</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="iceState">New</div>
+                <div>ICE State</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="clientCount">0</div>
+                <div>Connected Clients</div>
+            </div>
+        </div>
+        
+        <div class="log" id="log"></div>
     </div>
-    
-    <div class="card">
-        <h2>Features</h2>
-        <ul>
-            <li><strong>Screen Sharing:</strong> Host shares their screen with the client in real-time</li>
-            <li><strong>Remote Control:</strong> Client can control the host's computer via mouse and keyboard</li>
-            <li><strong>Simple Authentication:</strong> Uses a 6-digit session code for connection</li>
-            <li><strong>Secure Communication:</strong> All data is encrypted using WebRTC</li>
-            <li><strong>Cross-Network Compatible:</strong> Works across different networks using STUN/TURN servers</li>
-        </ul>
-    </div>
-    
-    <div class="card">
-        <h2>Getting Started</h2>
-        <p>To use Access-It, you need to download and install the client application on both computers:</p>
-        <ol>
-            <li>Download the Access-It client for your platform</li>
-            <li>Install and run the application</li>
-            <li>Choose whether you want to be the host (share your screen) or the client (view and control)</li>
-            <li>Follow the on-screen instructions to connect</li>
-        </ol>
-        <a href="#" class="download-btn">Download Client</a>
-    </div>
-    
-    <div class="card">
-        <h2>How It Works</h2>
-        <p>Access-It uses WebRTC for peer-to-peer communication, which means:</p>
-        <ul>
-            <li>Your screen data goes directly from host to client, not through our servers</li>
-            <li>All communication is encrypted end-to-end</li>
-            <li>Low latency for responsive remote control</li>
-            <li>Works across different networks and firewalls</li>
-        </ul>
-    </div>
-    
-    <footer>
-        <p>Access-It Remote Desktop &copy; 2023 | <a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a></p>
-    </footer>
+
+    <script>
+        class WebRTCHost {
+            constructor() {
+                this.ws = null;
+                this.pc = null;
+                this.dataChannel = null;
+                this.sessionCode = null;
+                this.sessionId = null;
+                this.clientId = null;
+                this.controlEnabled = false;
+                this.isConnected = false;
+                
+                // ICE servers - matching the working Python client configuration
+                this.iceServers = [
+                    {
+                        urls: [
+                            "stun:stun.l.google.com:19302",
+                            "stun:stun1.l.google.com:19302",
+                            "stun:stun2.l.google.com:19302",
+                            "stun:stun3.l.google.com:19302",
+                            "stun:stun4.l.google.com:19302",
+                            "stun:stun.stunprotocol.org:3478",
+                            "stun:stun.services.mozilla.com"
+                        ]
+                    },
+                    {
+                        urls: [
+                            "turn:82.29.181.9:3478",
+                            "turns:82.29.181.9:5349?transport=tcp"
+                        ],
+                        username: "anydesk",
+                        credential: "mypass321"
+                    }
+                ];
+                
+                this.initializeElements();
+                this.log("WebRTC Host initialized with ICE servers");
+                this.logIceServers();
+            }
+            
+            initializeElements() {
+                this.statusEl = document.getElementById('status');
+                this.sessionInfoEl = document.getElementById('sessionInfo');
+                this.sessionCodeEl = document.getElementById('sessionCode');
+                this.startBtn = document.getElementById('startBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.toggleControlBtn = document.getElementById('toggleControlBtn');
+                this.logEl = document.getElementById('log');
+                this.connectionStateEl = document.getElementById('connectionState');
+                this.iceStateEl = document.getElementById('iceState');
+                this.clientCountEl = document.getElementById('clientCount');
+            }
+            
+            log(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logMessage = `[${timestamp}] ${message}\n`;
+                this.logEl.textContent += logMessage;
+                this.logEl.scrollTop = this.logEl.scrollHeight;
+                console.log(message);
+            }
+            
+            logIceServers() {
+                this.log("ICE Servers configured:");
+                this.iceServers.forEach((server, index) => {
+                    if (server.username) {
+                        this.log(`  ${index + 1}. TURN: ${server.urls.join(', ')} (username: ${server.username})`);
+                    } else {
+                        this.log(`  ${index + 1}. STUN: ${server.urls.join(', ')}`);
+                    }
+                });
+            }
+            
+            updateStatus(message) {
+                this.statusEl.textContent = message;
+                this.log(`Status: ${message}`);
+            }
+            
+            updateConnectionState(state) {
+                this.connectionStateEl.textContent = state;
+                this.connectionStateEl.style.color = state === 'connected' ? '#4CAF50' : '#FF6B6B';
+            }
+            
+            updateIceState(state) {
+                this.iceStateEl.textContent = state;
+                this.iceStateEl.style.color = state === 'connected' || state === 'completed' ? '#4CAF50' : '#FF6B6B';
+            }
+            
+            updateClientCount(count) {
+                this.clientCountEl.textContent = count;
+                this.clientCountEl.style.color = count > 0 ? '#4CAF50' : '#FF6B6B';
+            }
+            
+            connectWebSocket() {
+                return new Promise((resolve, reject) => {
+                    const params = new URLSearchParams(window.location.search);
+                    const override = params.get('ws');
+                    const DEFAULT_WS = 'wss://my-signaling-server-q72i.onrender.com/';
+                    let wsUrl = DEFAULT_WS;
+
+                    if (override) {
+                        wsUrl = override;
+                    } else if (window.location.protocol === 'https:' && window.location.host) {
+                        // If hosted on a domain (e.g., Render), use same host
+                        wsUrl = `wss://${window.location.host}`;
+                    } else if (window.location.protocol.startsWith('http') && window.location.hostname) {
+                        // If served locally via http server, use same hostname on port 3000
+                        wsUrl = `ws://${window.location.hostname}:3000`;
+                    }
+                    
+                    this.log(`Connecting to signaling server: ${wsUrl}`);
+                    this.ws = new WebSocket(wsUrl);
+                    
+                    this.ws.onopen = () => {
+                        this.log("✅ WebSocket connected");
+                        this.updateStatus("Connected to signaling server");
+                        resolve();
+                    };
+                    
+                    this.ws.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            this.handleSignalingMessage(data);
+                        } catch (e) {
+                            this.log(`❌ Invalid JSON received: ${event.data}`);
+                        }
+                    };
+                    
+                    this.ws.onclose = () => {
+                        this.log("🔌 WebSocket disconnected");
+                        this.updateStatus("Disconnected from signaling server");
+                        this.isConnected = false;
+                        this.updateConnectionState("Disconnected");
+                        setTimeout(() => this.connectWebSocket().catch(() => {}), 3000);
+                    };
+                    
+                    this.ws.onerror = (error) => {
+                        this.log(`❌ WebSocket error: ${error}`);
+                        reject(error);
+                    };
+                });
+            }
+            
+            handleSignalingMessage(data) {
+                this.log(`📨 Received: ${data.type}`);
+                
+                switch (data.type) {
+                    case 'connected':
+                        this.clientId = data.clientId;
+                        this.log(`Client ID: ${this.clientId}`);
+                        break;
+                        
+                    case 'session-created':
+                        this.sessionCode = data.sessionCode;
+                        this.sessionId = data.sessionId;
+                        this.sessionCodeEl.textContent = this.sessionCode;
+                        this.sessionInfoEl.classList.remove('hidden');
+                        this.updateStatus(`Session created: ${this.sessionCode}`);
+                        this.log(`✅ Session created: ${this.sessionCode} (ID: ${this.sessionId})`);
+                        break;
+                        
+                    case 'client-joined':
+                        this.log(`🔗 Client joined: ${data.clientId}`);
+                        this.updateStatus("Client connected. Establishing WebRTC...");
+                        this.updateClientCount(1);
+                        this.createPeerConnection();
+                        break;
+                        
+                    case 'offer':
+                        this.log("📥 Received offer from client");
+                        this.handleOffer(data.payload);
+                        break;
+                        
+                    case 'answer':
+                        this.log("📥 Received answer from client");
+                        this.handleAnswer(data.payload);
+                        break;
+                        
+                    case 'ice-candidate':
+                        this.log("🧊 Received ICE candidate");
+                        this.handleIceCandidate(data.payload);
+                        break;
+                        
+                    case 'client-offline':
+                        this.log("👋 Client disconnected");
+                        this.updateStatus("Client disconnected");
+                        this.updateClientCount(0);
+                        this.cleanupPeerConnection();
+                        break;
+                        
+                    case 'error':
+                        this.log(`❌ Server error: ${data.message}`);
+                        break;
+                }
+            }
+            
+            createPeerConnection() {
+                try {
+                    this.pc = new RTCPeerConnection({ iceServers: this.iceServers });
+                    this.log("✅ RTCPeerConnection created");
+                    
+                    // Create data channel for control messages
+                    this.dataChannel = this.pc.createDataChannel("control", {
+                        ordered: true
+                    });
+                    
+                    this.dataChannel.onopen = () => {
+                        this.log("✅ Data channel opened");
+                        this.updateStatus("WebRTC connection established");
+                        this.isConnected = true;
+                        this.updateConnectionState("Connected");
+                        this.toggleControlBtn.disabled = false;
+                    };
+                    
+                    this.dataChannel.onclose = () => {
+                        this.log("🔌 Data channel closed");
+                        this.isConnected = false;
+                        this.updateConnectionState("Disconnected");
+                        this.toggleControlBtn.disabled = true;
+                    };
+                    
+                    this.dataChannel.onmessage = (event) => {
+                        this.log(`📨 Data channel message: ${event.data.substring(0, 100)}...`);
+                    };
+                    
+                    this.pc.onicecandidate = (event) => {
+                        if (event.candidate) {
+                            this.log(`🧊 Sending ICE candidate: ${event.candidate.type}/${event.candidate.protocol}`);
+                            this.sendSignaling('ice-candidate', event.candidate);
+                        } else {
+                            this.log("🧊 ICE gathering complete");
+                        }
+                    };
+                    
+                    this.pc.oniceconnectionstatechange = () => {
+                        const state = this.pc.iceConnectionState;
+                        this.log(`🧊 ICE connection state: ${state}`);
+                        this.updateIceState(state);
+                        
+                        if (state === 'connected' || state === 'completed') {
+                            this.updateStatus("WebRTC connection established");
+                        } else if (state === 'failed' || state === 'disconnected') {
+                            this.updateStatus("WebRTC connection failed");
+                            this.updateConnectionState("Failed");
+                        }
+                    };
+                    
+                    this.pc.onconnectionstatechange = () => {
+                        const state = this.pc.connectionState;
+                        this.log(`🔗 Connection state: ${state}`);
+                        this.updateConnectionState(state);
+                    };
+                    
+                    // Create and send offer
+                    this.createOffer();
+                    
+                } catch (error) {
+                    this.log(`❌ Failed to create peer connection: ${error}`);
+                    this.updateStatus("Failed to create WebRTC connection");
+                }
+            }
+            
+            async createOffer() {
+                try {
+                    const offer = await this.pc.createOffer();
+                    await this.pc.setLocalDescription(offer);
+                    this.log("📤 Sending offer to client");
+                    this.sendSignaling('offer', offer);
+                } catch (error) {
+                    this.log(`❌ Failed to create offer: ${error}`);
+                }
+            }
+            
+            async handleOffer(offer) {
+                try {
+                    await this.pc.setRemoteDescription(offer);
+                    const answer = await this.pc.createAnswer();
+                    await this.pc.setLocalDescription(answer);
+                    this.log("📤 Sending answer to client");
+                    this.sendSignaling('answer', answer);
+                } catch (error) {
+                    this.log(`❌ Failed to handle offer: ${error}`);
+                }
+            }
+            
+            async handleAnswer(answer) {
+                try {
+                    await this.pc.setRemoteDescription(answer);
+                    this.log("✅ Answer processed successfully");
+                } catch (error) {
+                    this.log(`❌ Failed to handle answer: ${error}`);
+                }
+            }
+            
+            async handleIceCandidate(candidate) {
+                try {
+                    await this.pc.addIceCandidate(candidate);
+                    this.log(`✅ ICE candidate added: ${candidate.type}/${candidate.protocol}`);
+                } catch (error) {
+                    this.log(`❌ Failed to add ICE candidate: ${error}`);
+                }
+            }
+            
+            sendSignaling(type, payload) {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    const message = {
+                        type: type,
+                        sessionId: this.sessionId,
+                        payload: payload
+                    };
+                    this.ws.send(JSON.stringify(message));
+                } else {
+                    this.log(`❌ Cannot send ${type}: WebSocket not connected`);
+                }
+            }
+            
+            cleanupPeerConnection() {
+                if (this.dataChannel) {
+                    this.dataChannel.close();
+                    this.dataChannel = null;
+                }
+                
+                if (this.pc) {
+                    this.pc.close();
+                    this.pc = null;
+                }
+                
+                this.isConnected = false;
+                this.updateConnectionState("Disconnected");
+                this.updateIceState("New");
+                this.toggleControlBtn.disabled = true;
+            }
+            
+            async start() {
+                try {
+                    this.updateStatus("Connecting to signaling server...");
+                    await this.connectWebSocket();
+                    
+                    // Create session
+                    this.log("📤 Creating session...");
+                    this.ws.send(JSON.stringify({ type: 'create-session' }));
+                    
+                    this.startBtn.disabled = true;
+                    this.stopBtn.disabled = false;
+                    
+                } catch (error) {
+                    this.log(`❌ Failed to start: ${error}`);
+                    this.updateStatus("Failed to connect to signaling server");
+                }
+            }
+            
+            stop() {
+                this.log("🛑 Stopping host session...");
+                
+                this.cleanupPeerConnection();
+                
+                if (this.ws) {
+                    this.ws.close();
+                    this.ws = null;
+                }
+                
+                this.sessionCode = null;
+                this.sessionId = null;
+                this.clientId = null;
+                this.controlEnabled = false;
+                
+                this.sessionInfoEl.classList.add('hidden');
+                this.startBtn.disabled = false;
+                this.stopBtn.disabled = true;
+                this.toggleControlBtn.disabled = true;
+                
+                this.updateStatus("Stopped");
+                this.updateClientCount(0);
+                this.updateConnectionState("Disconnected");
+                this.updateIceState("New");
+            }
+            
+            toggleControl() {
+                this.controlEnabled = !this.controlEnabled;
+                this.toggleControlBtn.textContent = this.controlEnabled ? 'Disable Control' : 'Enable Control';
+                this.toggleControlBtn.style.background = this.controlEnabled 
+                    ? 'linear-gradient(45deg, #FF6B6B, #FF5252)' 
+                    : 'linear-gradient(45deg, #4CAF50, #45a049)';
+                
+                if (this.ws && this.sessionId) {
+                    this.ws.send(JSON.stringify({
+                        type: 'toggle-control',
+                        sessionId: this.sessionId,
+                        enabled: this.controlEnabled
+                    }));
+                }
+                
+                this.log(`🎮 Remote control ${this.controlEnabled ? 'enabled' : 'disabled'}`);
+            }
+        }
+        
+        // Global instance
+        let webrtcHost = null;
+        
+        function startHosting() {
+            if (!webrtcHost) {
+                webrtcHost = new WebRTCHost();
+            }
+            webrtcHost.start();
+        }
+        
+        function stopHosting() {
+            if (webrtcHost) {
+                webrtcHost.stop();
+            }
+        }
+        
+        function toggleControl() {
+            if (webrtcHost) {
+                webrtcHost.toggleControl();
+            }
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            console.log("Access-It WebRTC Host ready");
+        });
+    </script>
 </body>
 </html>
